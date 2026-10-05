@@ -36,15 +36,18 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.WbTwilight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -69,11 +72,11 @@ import com.example.ui.components.DailyProgressBadge
 import com.example.ui.components.DailyProgressDialog
 import com.example.ui.components.GoToPageDialog
 import com.example.ui.components.KhatmahDialog
-import com.example.ui.components.KhatmahReminderBanner
 import com.example.ui.components.NightShiftDialog
 import com.example.ui.components.PlaylistsSheet
 import com.example.ui.components.QuranPageCard
 import com.example.ui.components.QuranSearchSheet
+import com.example.ui.components.QuranSideDrawer
 import com.example.ui.components.ReciterSelectionDialog
 import com.example.ui.components.SurahIndexSheet
 import com.example.ui.components.TafsirBottomSheet
@@ -122,9 +125,12 @@ fun QuranScreen(
         }
     }
 
-    // Back handler: if dialogs or audio player or sheets are open, handle back gracefully
-    BackHandler(enabled = uiState.isKhatmahDialogOpen || uiState.isSearchOpen || uiState.isNightShiftDialogOpen || uiState.isAddToPlaylistOpen || uiState.isPlaylistsOpen || uiState.isDailyProgressOpen || uiState.isTafsirOpen || uiState.isReciterDialogOpen || playerState.isPlayerVisible || uiState.selectedAyahKey != null || uiState.isOverviewMode || uiState.isIndexOpen || uiState.isBookmarksOpen || uiState.isGoToPageOpen) {
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+
+    // Back handler: if drawer, dialogs, audio player or sheets are open, handle back gracefully
+    BackHandler(enabled = drawerState.isOpen || uiState.isKhatmahDialogOpen || uiState.isSearchOpen || uiState.isNightShiftDialogOpen || uiState.isAddToPlaylistOpen || uiState.isPlaylistsOpen || uiState.isDailyProgressOpen || uiState.isTafsirOpen || uiState.isReciterDialogOpen || playerState.isPlayerVisible || uiState.selectedAyahKey != null || uiState.isOverviewMode || uiState.isIndexOpen || uiState.isBookmarksOpen || uiState.isGoToPageOpen) {
         when {
+            drawerState.isOpen -> scope.launch { drawerState.close() }
             uiState.isKhatmahDialogOpen -> viewModel.closeKhatmahDialog()
             uiState.isSearchOpen -> viewModel.closeSearch()
             uiState.isNightShiftDialogOpen -> viewModel.closeNightShiftDialog()
@@ -159,7 +165,33 @@ fun QuranScreen(
         label = "bg_color"
     )
 
-    Box(
+    QuranSideDrawer(
+        drawerState = drawerState,
+        currentPageNumber = uiState.currentPageNumber,
+        isNightMode = uiState.isNightMode,
+        isNightShiftActive = uiState.isNightShiftActive,
+        isBookmarked = uiState.isBookmarked,
+        isPlayingAudio = playerState.isPlaying,
+        currentReciterName = playerState.currentReciter.name,
+        dailyPagesRead = uiState.dailyProgress?.pagesReadCount ?: 0,
+        dailyTargetGoal = uiState.dailyProgress?.targetPagesGoal ?: 10,
+        bookmarksCount = uiState.bookmarks.size,
+        favoriteAyahsCount = uiState.favoriteAyahs.size,
+        khatmahPlan = uiState.khatmahPlan,
+        onOpenIndex = { viewModel.openIndex() },
+        onOpenSearch = { viewModel.openSearch() },
+        onOpenKhatmah = { viewModel.openKhatmahDialog() },
+        onOpenDailyProgress = { viewModel.openDailyProgress() },
+        onOpenBookmarks = { viewModel.openBookmarks() },
+        onOpenGoToPage = { viewModel.openGoToPage() },
+        onToggleAudio = { viewModel.playCurrentAyah() },
+        onOpenReciterDialog = { viewModel.openReciterDialog() },
+        onOpenPlaylists = { viewModel.openPlaylists() },
+        onToggleBookmark = { viewModel.toggleBookmark() },
+        onToggleNightMode = { viewModel.toggleNightMode() },
+        onOpenNightShift = { viewModel.openNightShiftDialog() }
+    ) {
+        Box(
         modifier = modifier
             .fillMaxSize()
             .background(animatedBgColor)
@@ -257,7 +289,7 @@ fun QuranScreen(
             )
         }
 
-        // Quick Actions at Top End Corner during reading: Theme Toggle, Audio, Bookmark
+        // Minimal, Clean Top End Button to open the Quran Side Drawer
         AnimatedVisibility(
             visible = !uiState.isOverviewMode,
             enter = fadeIn(),
@@ -266,177 +298,31 @@ fun QuranScreen(
                 .align(Alignment.TopEnd)
                 .padding(top = 10.dp, end = 12.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            IconButton(
+                onClick = { scope.launch { drawerState.open() } },
+                modifier = Modifier
+                    .size(42.dp)
+                    .background(
+                        color = if (uiState.isNightMode) Color(0x332B3226) else Color(0x44EDE5D6),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = if (uiState.isNightMode) QuranGold.copy(alpha = 0.5f) else Color(0xFFD8CABE),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .testTag("open_side_drawer_button")
             ) {
-                // Khatmah Plan Tracker Button
-                IconButton(
-                    onClick = { viewModel.openKhatmahDialog() },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            color = if (uiState.khatmahPlan?.isActive == true) {
-                                QuranDarkGreen.copy(alpha = 0.22f)
-                            } else {
-                                if (uiState.isNightMode) Color(0x332B3226) else Color(0x33EDE5D6)
-                            },
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = if (uiState.khatmahPlan?.isActive == true) QuranGold else Color.Transparent,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .testTag("top_khatmah_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MenuBook,
-                        contentDescription = "ختمة القرآن الكريم",
-                        tint = if (uiState.isNightMode) QuranGoldLight else QuranDarkGreen,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                // Search Button: Quickly find specific Surahs or Ayahs by name, number, or keyword
-                IconButton(
-                    onClick = { viewModel.openSearch() },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            color = if (uiState.isNightMode) Color(0x332B3226) else Color(0x33EDE5D6),
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = Color.Transparent,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .testTag("top_search_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "البحث في القرآن الكريم",
-                        tint = if (uiState.isNightMode) Color(0xFFC7AF80) else Color(0xFF7D725F),
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-
-                // Night Shift Eye-Comfort Button
-                IconButton(
-                    onClick = { viewModel.openNightShiftDialog() },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            color = if (uiState.isNightShiftActive) {
-                                Color(0xFFFF9E1B).copy(alpha = 0.28f)
-                            } else {
-                                if (uiState.isNightMode) Color(0x332B3226) else Color(0x33EDE5D6)
-                            },
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = if (uiState.isNightShiftActive) Color(0xFFFF9E1B) else Color.Transparent,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .testTag("night_shift_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.WbTwilight,
-                        contentDescription = "درع حماية العين (Night Shift)",
-                        tint = if (uiState.isNightShiftActive) Color(0xFFE67E22) else if (uiState.isNightMode) Color(0xFFC7AF80) else Color(0xFF7D725F),
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-
-                // Theme Toggle: Light Parchment reading mode vs Dark mode for low light
-                IconButton(
-                    onClick = { viewModel.toggleNightMode() },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            color = if (uiState.isNightMode) {
-                                QuranGold.copy(alpha = 0.22f)
-                            } else {
-                                Color(0x33EDE5D6)
-                            },
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = if (uiState.isNightMode) QuranGold.copy(alpha = 0.6f) else Color.Transparent,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .testTag("theme_toggle_button")
-                ) {
-                    Icon(
-                        imageVector = if (uiState.isNightMode) Icons.Default.LightMode else Icons.Default.DarkMode,
-                        contentDescription = if (uiState.isNightMode) "التحويل لوضع الورق العتيق (النهاري)" else "التحويل للوضع الليلي المريح",
-                        tint = if (uiState.isNightMode) QuranGoldLight else Color(0xFF7D725F),
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-
-                // Quick Audio Recitation Button
-                IconButton(
-                    onClick = { viewModel.playCurrentAyah() },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            color = if (playerState.isPlaying) {
-                                QuranGold.copy(alpha = 0.28f)
-                            } else {
-                                if (uiState.isNightMode) Color(0x332B3226) else Color(0x33EDE5D6)
-                            },
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = if (playerState.isPlaying) QuranGold else Color.Transparent,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .testTag("quick_audio_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                        contentDescription = "الاستماع لتلاوة الآية",
-                        tint = if (playerState.isPlaying) QuranGold else if (uiState.isNightMode) Color(0xFFC7AF80) else Color(0xFF7D725F),
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-
-                // Quick Bookmark Toggle Button
-                IconButton(
-                    onClick = { viewModel.toggleBookmark() },
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            color = if (uiState.isBookmarked) {
-                                QuranGold.copy(alpha = 0.25f)
-                            } else {
-                                if (uiState.isNightMode) Color(0x332B3226) else Color(0x33EDE5D6)
-                            },
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = if (uiState.isBookmarked) QuranGold else Color.Transparent,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .testTag("quick_bookmark_button")
-                ) {
-                    Icon(
-                        imageVector = if (uiState.isBookmarked) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                        contentDescription = if (uiState.isBookmarked) "إزالة الإشارة المرجعية" else "حفظ كإشارة مرجعية",
-                        tint = if (uiState.isBookmarked) QuranGold else if (uiState.isNightMode) Color(0xFFC7AF80) else Color(0xFF7D725F),
-                        modifier = Modifier.size(23.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Menu,
+                    contentDescription = "فتح القائمة الجانبية",
+                    tint = if (uiState.isNightMode) QuranGoldLight else QuranDarkGreen,
+                    modifier = Modifier.size(24.dp)
+                )
             }
         }
 
-        // Top Start Controls: Daily Progress Indicator and Bookmarks Badge
+        // Minimal, Clean Top Start Title Pill to open the Quran Side Drawer
         AnimatedVisibility(
             visible = !uiState.isOverviewMode,
             enter = fadeIn(),
@@ -445,70 +331,31 @@ fun QuranScreen(
                 .align(Alignment.TopStart)
                 .padding(top = 10.dp, start = 12.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Daily Reading Progress Badge (Visual Completion Indicator)
-                DailyProgressBadge(
-                    dailyProgress = uiState.dailyProgress,
-                    isNightMode = uiState.isNightMode,
-                    onClick = { viewModel.openDailyProgress() }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .background(
+                        color = if (uiState.isNightMode) Color(0x332B3226) else Color(0x44EDE5D6),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = if (uiState.isNightMode) QuranGold.copy(alpha = 0.5f) else Color(0xFFD8CABE),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .clickable { scope.launch { drawerState.open() } }
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .testTag("top_surah_title_pill")
+            ) {
+                Text(
+                    text = "${currentSurah.fullName} • ${currentJuzName}",
+                    fontFamily = AmiriFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = if (uiState.isNightMode) QuranGoldLight else QuranDarkGreen
                 )
-
-                if (uiState.bookmarks.isNotEmpty()) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clickable { viewModel.openBookmarks() }
-                            .background(
-                                color = if (uiState.isNightMode) Color(0x332B3226) else Color(0x33EDE5D6),
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            .padding(horizontal = 8.dp, vertical = 6.dp)
-                            .testTag("view_saved_bookmarks_pill")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Bookmark,
-                            contentDescription = "الإشارات المرجعية المحفوظة",
-                            tint = QuranGold,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = QuranData.toArabicDigits(uiState.bookmarks.size),
-                            fontFamily = AmiriFamily,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            color = if (uiState.isNightMode) Color(0xFFC7AF80) else Color(0xFF5D5343)
-                        )
-                    }
-                }
             }
         }
-
-        // Khatmah Daily Wird In-App Alert / Reminder Banner
-        KhatmahReminderBanner(
-            visible = uiState.isKhatmahReminderBannerVisible && !uiState.isOverviewMode,
-            khatmahPlan = uiState.khatmahPlan,
-            pagesLeftToday = uiState.khatmahPagesLeftToday,
-            dailyRequiredPages = uiState.dailyRequiredPages,
-            onStartWird = {
-                val startPg = uiState.khatmahPlan?.currentProgressPage ?: uiState.currentPageNumber
-                viewModel.onPageChanged(startPg)
-                viewModel.dismissKhatmahReminderBanner()
-                scope.launch {
-                    pagerState.animateScrollToPage(startPg - 1)
-                }
-            },
-            onOpenKhatmahDetails = {
-                viewModel.openKhatmahDialog()
-            },
-            onDismiss = {
-                viewModel.dismissKhatmahReminderBanner()
-            },
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 56.dp)
-        )
 
         // Top Surah Carousel (Visible only when zoomed out / overview mode is active)
         TopSurahCarousel(
@@ -756,4 +603,5 @@ fun QuranScreen(
             onResetKhatmah = { viewModel.resetKhatmah() }
         )
     }
+}
 }
