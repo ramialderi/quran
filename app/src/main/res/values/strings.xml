@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">القرآن الكريم</string>
+    <string name="surah_index">فهرس السور</string>
+    <string name="search_surah">بحث في أسماء السور والأجزاء...</string>
+    <string name="page">صفحة</string>
+    <string name="juz">الجزء</string>
+    <string name="hizb">الحزب</string>
+    <string name="meccan">مكية</string>
+    <string name="medinan">مدنية</string>
+    <string name="night_mode">الوضع الليلي</string>
+    <string name="bookmark">إشارة مرجعية</string>
+    <string name="bookmark_saved">تم حفظ العلامة المرجعية</string>
+    <string name="close">إغلاق</string>
+</resources>

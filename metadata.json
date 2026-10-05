@@ -1,0 +1,6 @@
+{
+  "name": "القرآن الكريم",
+  "description": "تطبيق مصحف شريف لقراءة القرآن الكريم بتصميم فاخر وأنيق وفهرس للسور وميزة تصغير وتكبير الصفحات والتنقل السلس وحفظ مكان القراءة تلقائياً.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
