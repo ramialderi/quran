@@ -88,6 +88,7 @@ fun QuranSideDrawer(
     khatmahPlan: KhatmahPlan?,
     onOpenIndex: () -> Unit,
     onOpenSearch: () -> Unit,
+    onOpenTafsir: () -> Unit = {},
     onOpenKhatmah: () -> Unit,
     onOpenDailyProgress: () -> Unit,
     onOpenBookmarks: () -> Unit,
@@ -259,7 +260,18 @@ fun QuranSideDrawer(
                         onClick = { closeAnd { onOpenSearch() } }
                     )
 
-                    // 3. ختمة القرآن الكريم
+                    // 3. التفسير الميسر للآيات
+                    DrawerMenuItem(
+                        icon = Icons.Default.MenuBook,
+                        title = "التفسير الميسر للقرآن",
+                        subtitle = "تفسير معاني آيات صفحة ${QuranData.toArabicDigits(currentPageNumber)}",
+                        badgeText = "تفسير",
+                        badgeColor = QuranGoldBanner,
+                        testTag = "drawer_item_tafsir",
+                        onClick = { closeAnd { onOpenTafsir() } }
+                    )
+
+                    // 4. ختمة القرآن الكريم
                     val khatmahBadge = if (khatmahPlan != null && khatmahPlan.isActive) {
                         val percent = ((khatmahPlan.currentProgressPage.toFloat() / 604f) * 100).toInt()
                         "${QuranData.toArabicDigits(percent)}%"

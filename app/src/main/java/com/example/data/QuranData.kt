@@ -468,6 +468,17 @@ object QuranData {
 
         return results
     }
+
+    fun getPageForAyah(surahId: Int, ayahNumber: Int): Int {
+        val surah = surahs.find { it.id == surahId } ?: return 1
+        for (p in surah.startPage..surah.endPage) {
+            val pageData = getPage(p)
+            if (pageData.verses.any { it.ayahNumber == ayahNumber }) {
+                return p
+            }
+        }
+        return surah.startPage
+    }
 }
 
 data class SearchAyahResult(

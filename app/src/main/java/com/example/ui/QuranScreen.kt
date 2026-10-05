@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.QuranData
 import com.example.ui.components.AddToPlaylistDialog
 import com.example.ui.components.AudioPlayerBar
+import com.example.ui.components.AyahActionBar
 import com.example.ui.components.BookmarksSheet
 import com.example.ui.components.BottomScrubber
 import com.example.ui.components.DailyProgressBadge
@@ -180,6 +181,7 @@ fun QuranScreen(
         khatmahPlan = uiState.khatmahPlan,
         onOpenIndex = { viewModel.openIndex() },
         onOpenSearch = { viewModel.openSearch() },
+        onOpenTafsir = { viewModel.openCurrentPageTafsir() },
         onOpenKhatmah = { viewModel.openKhatmahDialog() },
         onOpenDailyProgress = { viewModel.openDailyProgress() },
         onOpenBookmarks = { viewModel.openBookmarks() },
@@ -289,70 +291,52 @@ fun QuranScreen(
             )
         }
 
-        // Minimal, Clean Top End Button to open the Quran Side Drawer
+        // Minimal, Clean Top End Button to open the Quran Side Drawer (no bounding box)
         AnimatedVisibility(
             visible = !uiState.isOverviewMode,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 10.dp, end = 12.dp)
+                .padding(top = 8.dp, end = 10.dp)
         ) {
             IconButton(
                 onClick = { scope.launch { drawerState.open() } },
                 modifier = Modifier
-                    .size(42.dp)
-                    .background(
-                        color = if (uiState.isNightMode) Color(0x332B3226) else Color(0x44EDE5D6),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = if (uiState.isNightMode) QuranGold.copy(alpha = 0.5f) else Color(0xFFD8CABE),
-                        shape = RoundedCornerShape(12.dp)
-                    )
+                    .size(36.dp)
                     .testTag("open_side_drawer_button")
             ) {
                 Icon(
                     imageVector = Icons.Default.Menu,
                     contentDescription = "فتح القائمة الجانبية",
-                    tint = if (uiState.isNightMode) QuranGoldLight else QuranDarkGreen,
-                    modifier = Modifier.size(24.dp)
+                    tint = if (uiState.isNightMode) Color(0xFFB0A48E) else Color(0xFF6B6355),
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
 
-        // Minimal, Clean Top Start Title Pill to open the Quran Side Drawer
+        // Minimal, Clean Top Start Surah Name & Juz (no enclosing rectangle, smaller elegant font)
         AnimatedVisibility(
             visible = !uiState.isOverviewMode,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(top = 10.dp, start = 12.dp)
+                .padding(top = 10.dp, start = 14.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .background(
-                        color = if (uiState.isNightMode) Color(0x332B3226) else Color(0x44EDE5D6),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = if (uiState.isNightMode) QuranGold.copy(alpha = 0.5f) else Color(0xFFD8CABE),
-                        shape = RoundedCornerShape(12.dp)
-                    )
                     .clickable { scope.launch { drawerState.open() } }
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
                     .testTag("top_surah_title_pill")
             ) {
                 Text(
                     text = "${currentSurah.fullName} • ${currentJuzName}",
                     fontFamily = AmiriFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = if (uiState.isNightMode) QuranGoldLight else QuranDarkGreen
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 11.5.sp,
+                    color = if (uiState.isNightMode) Color(0xFFB0A48E) else Color(0xFF6B6355)
                 )
             }
         }
@@ -474,6 +458,36 @@ fun QuranScreen(
             modifier = Modifier.align(Alignment.BottomCenter)
         )
 
+        // Floating Ayah Action Bar (Tafsir, Audio, Favorite, Copy) when an ayah is selected
+        val selectedAyahParts = uiState.selectedAyahKey?.split(":")
+        val selSurahId = selectedAyahParts?.getOrNull(0)?.toIntOrNull()
+        val selAyahNum = selectedAyahParts?.getOrNull(1)?.toIntOrNull()
+        val isAyahFav = if (selSurahId != null && selAyahNum != null) {
+            viewModel.isAyahFavorite(selSurahId, selAyahNum)
+        } else false
+
+        AyahActionBar(
+            visible = uiState.selectedAyahKey != null && !uiState.isOverviewMode,
+            selectedAyahKey = uiState.selectedAyahKey,
+            isNightMode = uiState.isNightMode,
+            isFavorite = isAyahFav,
+            onOpenTafsir = { surahId, ayahNum ->
+                viewModel.openTafsirForAyah(surahId, ayahNum)
+            },
+            onPlayAyah = { surahId, ayahNum ->
+                viewModel.playAyahDirectly(surahId, ayahNum)
+            },
+            onToggleFavorite = { surahId, ayahNum ->
+                viewModel.toggleFavoriteAyah(surahId, ayahNum)
+            },
+            onDismiss = {
+                viewModel.clearAyahSelection()
+            },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = if (playerState.isPlayerVisible) 60.dp else 12.dp)
+        )
+
         // Reciter Selection Dialog
         ReciterSelectionDialog(
             isOpen = uiState.isReciterDialogOpen,
@@ -484,7 +498,7 @@ fun QuranScreen(
             onDismiss = { viewModel.closeReciterDialog() }
         )
 
-        // Tafsir Bottom Sheet Overlay (shown on long-pressing an ayah)
+        // Tafsir Bottom Sheet Overlay (shown on long-pressing an ayah or from drawer or action bar)
         val isCurrentAyahFav = uiState.currentTafsir?.let {
             viewModel.isAyahFavorite(it.surahId, it.ayahNumber)
         } ?: false
@@ -503,6 +517,8 @@ fun QuranScreen(
                 viewModel.closeTafsir()
                 viewModel.playAyahDirectly(surahId, ayahNum)
             },
+            onNextAyah = { viewModel.nextTafsirAyah() },
+            onPreviousAyah = { viewModel.previousTafsirAyah() },
             onDismiss = { viewModel.closeTafsir() }
         )
 

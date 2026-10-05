@@ -23,6 +23,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -78,6 +80,8 @@ fun TafsirBottomSheet(
     isFavorite: Boolean = false,
     onToggleFavorite: () -> Unit = {},
     onPlayAudio: (surahId: Int, ayahNumber: Int) -> Unit,
+    onNextAyah: () -> Unit = {},
+    onPreviousAyah: () -> Unit = {},
     onDismiss: () -> Unit,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
 ) {
@@ -398,6 +402,73 @@ fun TafsirBottomSheet(
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Navigation between verses for Tafsir (الآية السابقة والآية التالية)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = onPreviousAyah,
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, if (isNightMode) Color(0xFF2E382C) else QuranGold.copy(alpha = 0.6f)),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (isNightMode) QuranNightParchment else Color(0xFFFAF6EF),
+                            contentColor = textColor
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("tafsir_prev_ayah_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = QuranGoldBanner
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "الآية السابقة",
+                            fontFamily = AmiriFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    OutlinedButton(
+                        onClick = onNextAyah,
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, if (isNightMode) Color(0xFF2E382C) else QuranGold.copy(alpha = 0.6f)),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = if (isNightMode) QuranNightParchment else Color(0xFFFAF6EF),
+                            contentColor = textColor
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("tafsir_next_ayah_button")
+                    ) {
+                        Text(
+                            text = "الآية التالية",
+                            fontFamily = AmiriFamily,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = QuranGoldBanner
+                        )
                     }
                 }
             }

@@ -749,6 +749,25 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Tafsir functions
+    fun openCurrentPageTafsir() {
+        val currentPg = _uiState.value.currentPageNumber
+        val pageData = QuranData.getPage(currentPg)
+        val surah = QuranData.getSurahForPage(currentPg)
+
+        val selectedParts = _uiState.value.selectedAyahKey?.split(":")
+        val selSurahId = selectedParts?.getOrNull(0)?.toIntOrNull()
+        val selAyahNum = selectedParts?.getOrNull(1)?.toIntOrNull()
+
+        val (targetSurahId, targetAyahNum) = if (selSurahId == surah.id && selAyahNum != null) {
+            Pair(selSurahId, selAyahNum)
+        } else {
+            val firstAyah = pageData.verses.firstOrNull()?.ayahNumber ?: 1
+            Pair(surah.id, firstAyah)
+        }
+
+        openTafsirForAyah(targetSurahId, targetAyahNum)
+    }
+
     fun openTafsirForAyah(surahId: Int, ayahNumber: Int) {
         val surah = QuranData.surahs.find { it.id == surahId }
         val surahName = surah?.fullName ?: "سورة"
@@ -780,6 +799,46 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
             isTafsirOpen = false,
             currentTafsir = null
         )
+    }
+
+    fun nextTafsirAyah() {
+        val current = _uiState.value.currentTafsir ?: return
+        val surah = QuranData.surahs.find { it.id == current.surahId } ?: return
+        if (current.ayahNumber < surah.ayahsCount) {
+            val nextAyah = current.ayahNumber + 1
+            val page = QuranData.getPageForAyah(current.surahId, nextAyah)
+            if (page != _uiState.value.currentPageNumber) {
+                onPageChanged(page)
+            }
+            openTafsirForAyah(current.surahId, nextAyah)
+        } else {
+            val nextSurahIndex = QuranData.surahs.indexOf(surah) + 1
+            if (nextSurahIndex < QuranData.surahs.size) {
+                val nextSurah = QuranData.surahs[nextSurahIndex]
+                onPageChanged(nextSurah.startPage)
+                openTafsirForAyah(nextSurah.id, 1)
+            }
+        }
+    }
+
+    fun previousTafsirAyah() {
+        val current = _uiState.value.currentTafsir ?: return
+        val surah = QuranData.surahs.find { it.id == current.surahId } ?: return
+        if (current.ayahNumber > 1) {
+            val prevAyah = current.ayahNumber - 1
+            val page = QuranData.getPageForAyah(current.surahId, prevAyah)
+            if (page != _uiState.value.currentPageNumber) {
+                onPageChanged(page)
+            }
+            openTafsirForAyah(current.surahId, prevAyah)
+        } else {
+            val prevSurahIndex = QuranData.surahs.indexOf(surah) - 1
+            if (prevSurahIndex >= 0) {
+                val prevSurah = QuranData.surahs[prevSurahIndex]
+                onPageChanged(prevSurah.endPage)
+                openTafsirForAyah(prevSurah.id, prevSurah.ayahsCount)
+            }
+        }
     }
 
     override fun onCleared() {
