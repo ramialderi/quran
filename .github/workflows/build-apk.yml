@@ -16,7 +16,9 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - uses: android-actions/setup-android@v3
+      # The runner already has the Android SDK; just accept the licenses so Gradle can download platforms
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
       # The repo has no gradlew, so install the Gradle version the project asks for
       - uses: gradle/actions/setup-gradle@v4
